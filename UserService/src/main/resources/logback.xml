@@ -1,0 +1,19 @@
+<configuration>
+    <root level="WARN"> <!-- Показывать только предупреждения и ошибки -->
+        <appender-ref ref="STDOUT" />
+    </root>
+
+    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{HH:mm:ss} [%thread] %-5level - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Отключаем детальные логи Hibernate -->
+    <logger name="org.hibernate.SQL" level="OFF" />
+    <logger name="org.hibernate.type" level="OFF" />
+    <logger name="org.hibernate.engine" level="OFF" />
+
+    <!-- Для своего кода оставляем INFO -->
+    <logger name="ru.example.userservice" level="INFO" />
+</configuration>

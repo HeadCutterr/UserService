@@ -1,6 +1,5 @@
-package dao.impl;
+package userservice.dao;
 
-import dao.UserDAO;
 import model.User;
 import org.hibernate.Session;
 import org.hibernate.Transaction;
@@ -19,6 +18,10 @@ public class UserDAOImpl implements UserDAO {
         Transaction transaction = null;
         try (Session session = HibernateUtil.getSessionFactory().openSession()) {
             transaction = session.beginTransaction();
+
+            if(user.getId() == null || user.getId() == 0){
+                user.initializeCreatedAt();
+            }
             session.persist(user);
             transaction.commit();
             logger.info("User saved successfully: {}", user);
