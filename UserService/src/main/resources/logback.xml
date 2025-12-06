@@ -15,5 +15,5 @@
     <logger name="org.hibernate.engine" level="OFF" />
 
     <!-- Для своего кода оставляем INFO -->
-    <logger name="ru.example.userservice" level="INFO" />
+    <logger name="ru.example.com.example.userservice.userservice" level="INFO" />
 </configuration>
