@@ -1,7 +1,7 @@
 package com.example.notificationservice;
 
 import com.example.notificationservice.event.UserEvent;
-import org.junit.jupiter.api.BeforeAll;
+import jakarta.mail.internet.MimeUtility;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -15,6 +15,7 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static org.awaitility.Awaitility.await;
 
@@ -33,6 +34,22 @@ class NotificationServiceIntegrationTest {
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.kafka.bootstrap-servers", kafka::getBootstrapServers);
+
+        registry.add("spring.kafka.consumer.bootstrap-servers", kafka::getBootstrapServers);
+        registry.add("spring.kafka.consumer.group-id", () -> "notification-group");
+        registry.add("spring.kafka.consumer.auto-offset-reset", () -> "earliest");
+        registry.add("spring.kafka.consumer.key-deserializer", () -> "org.apache.kafka.common.serialization.StringDeserializer");
+        registry.add("spring.kafka.consumer.value-deserializer", () -> "org.springframework.kafka.support.serializer.JsonDeserializer");
+        registry.add("spring.kafka.consumer.properties.spring.json.value.default.type", () -> "com.example.notificationservice.event.UserEvent");
+        registry.add("spring.kafka.consumer.properties.spring.json.trusted.packages", () -> "*");
+        registry.add("spring.kafka.consumer.properties.spring.json.use.type.headers", () -> "false");
+
+        registry.add("spring.kafka.producer.bootstrap-servers", kafka::getBootstrapServers);
+        registry.add("spring.kafka.producer.key-serializer", () -> "org.apache.kafka.common.serialization.StringSerializer");
+        registry.add("spring.kafka.producer.value-serializer", () -> "org.springframework.kafka.support.serializer.JsonSerializer");
+        registry.add("spring.kafka.producer.properties.spring.json.trusted.packages", () -> "*");
+        registry.add("spring.kafka.producer.properties.spring.json.add.type.headers", () -> "false");
+
         registry.add("spring.mail.host", mailhog::getHost);
         registry.add("spring.mail.port", () -> mailhog.getMappedPort(1025));
         registry.add("spring.mail.properties.mail.smtp.auth", () -> false);
@@ -58,12 +75,16 @@ class NotificationServiceIntegrationTest {
                     assert !messages.isEmpty() : "No emails received within timeout";
                     assert messages.get(0).getContent().getHeaders().get("To").contains(testEmail) : "Email To header does not match. Expected: " + testEmail + ", Got: " + messages.get(0).getContent().getHeaders().get("To");
 
-                    List<String> subjects = messages.get(0).getContent().getHeaders().get("Subject");
-                    assert subjects != null && !subjects.isEmpty() : "Email Subject header is missing or empty";
+                    List<String> subjectParts = messages.get(0).getContent().getHeaders().get("Subject");
+                    assert subjectParts != null && !subjectParts.isEmpty() : "Email Subject header is missing or empty";
 
-                    boolean subjectMatched = subjects.stream()
-                            .anyMatch(subject -> subject.contains("0JfQtNGA0LDQstGB0YLQstGD0LnRgtC1ISDQktCw0Ygg"));
-                    assert subjectMatched : "Email Subject does not contain expected Base64 fragment for CREATE event. Got subjects: " + subjects;
+                    String fullSubject = subjectParts.stream().collect(Collectors.joining(" "));
+                    System.out.println("CREATE Test - Full Subject (raw): " + fullSubject);
+
+                    String decodedSubject = MimeUtility.decodeText(fullSubject);
+                    System.out.println("CREATE Test - Decoded Subject: " + decodedSubject);
+
+                    assert decodedSubject.contains("был успешно создан") : "Email Subject does not contain expected text for CREATE event. Got decoded subject: " + decodedSubject;
                 });
     }
 
@@ -83,12 +104,16 @@ class NotificationServiceIntegrationTest {
                     assert !messages.isEmpty() : "No emails received within timeout";
                     assert messages.get(0).getContent().getHeaders().get("To").contains(testEmail) : "Email To header does not match. Expected: " + testEmail + ", Got: " + messages.get(0).getContent().getHeaders().get("To");
 
-                    List<String> subjects = messages.get(0).getContent().getHeaders().get("Subject");
-                    assert subjects != null && !subjects.isEmpty() : "Email Subject header is missing or empty";
+                    List<String> subjectParts = messages.get(0).getContent().getHeaders().get("Subject");
+                    assert subjectParts != null && !subjectParts.isEmpty() : "Email Subject header is missing or empty";
 
-                    boolean subjectMatched = subjects.stream()
-                            .anyMatch(subject -> subject.contains("0JfQtNGA0LDQstGB0YLQstGD0LnRgtC1ISDQvdCwINGB0LA="));
-                    assert subjectMatched : "Email Subject does not contain expected Base64 fragment for DELETE event. Got subjects: " + subjects;
+                    String fullSubject = subjectParts.stream().collect(Collectors.joining(" "));
+                    System.out.println("DELETE Test - Full Subject (raw): " + fullSubject);
+
+                    String decodedSubject = MimeUtility.decodeText(fullSubject);
+                    System.out.println("DELETE Test - Decoded Subject: " + decodedSubject);
+
+                    assert decodedSubject.contains("был удалён") : "Email Subject does not contain expected text for DELETE event. Got decoded subject: " + decodedSubject;
                 });
     }
 }

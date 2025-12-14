@@ -1,10 +1,12 @@
 package com.example.notificationservice;
 
+import jakarta.mail.internet.MimeUtility;
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
 import kong.unirest.json.JSONArray;
 import kong.unirest.json.JSONObject;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -45,7 +47,9 @@ class MailHogMessage {
                             for (int i = 0; i < headerValuesArray.length(); i++) {
                                 Object item = headerValuesArray.get(i);
                                 if (item != null) {
-                                    headerValuesList.add(item.toString());
+                                    String rawHeaderValue = item.toString();
+                                    String decodedHeaderValue = decodeMimeHeaderValue(rawHeaderValue);
+                                    headerValuesList.add(decodedHeaderValue);
                                 } else {
                                     headerValuesList.add(null);
                                 }
@@ -53,7 +57,9 @@ class MailHogMessage {
                             this.Headers.put(key, headerValuesList);
                         } else {
                             System.out.println("Warning: Header value for key '" + key + "' is not an array: " + valueObj + ". Adding as single-item list.");
-                            this.Headers.put(key, List.of(valueObj != null ? valueObj.toString() : "null"));
+                            String rawHeaderValue = valueObj != null ? valueObj.toString() : "null";
+                            String decodedHeaderValue = decodeMimeHeaderValue(rawHeaderValue);
+                            this.Headers.put(key, List.of(decodedHeaderValue));
                         }
                     }
                 }
@@ -61,6 +67,15 @@ class MailHogMessage {
                 if (contentJson.has("Body")) {
                     this.Body = contentJson.getString("Body");
                 }
+            }
+        }
+
+        private String decodeMimeHeaderValue(String rawValue) {
+            try {
+                return MimeUtility.decodeText(rawValue);
+            } catch (IOException e) {
+                System.out.println("Warning: Failed to decode MIME header value: " + rawValue + ". Error: " + e.getMessage());
+                return rawValue;
             }
         }
 
