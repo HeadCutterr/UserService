@@ -1,1 +1,7 @@
 При запуске, изменить данные в hibernate.cfg.xml, а именно в строках 8,9,10 необходимо указать название БД, пользователя и пароль пользователя
+
+UserServise с Kafka:
+1) В UserService необходимо создать докер контейнеры командой docker-compose up -d
+2) Запуск UserService и Notificationservice происходит командой .\mvnw spring-boot:run
+3) Http запросы остались неизменными с прошлой ДЗ, их можно выгрузить в postman из папки UserService/Postman
+4) Все данные по уведмолениям идут через MailHog, после запуска docker контейнеров работает на http://localhost:8025
