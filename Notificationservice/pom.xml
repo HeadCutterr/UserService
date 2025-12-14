@@ -110,14 +110,10 @@
             <version>3.14.5</version>
             <scope>test</scope>
         </dependency>
-        <!-- jackson-databind для тестов, если нужно, но она уже должна быть подтянута из dependencyManagement -->
-        <!--
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
-            <scope>test</scope>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
-        -->
     </dependencies>
 
     <build>

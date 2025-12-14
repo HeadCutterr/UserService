@@ -1,4 +1,4 @@
-package com.example.notificationservice;
+package com.example.notificationservice;// src/test/java/com/example/notificationservice/MailHogClient.java
 
 import kong.unirest.HttpResponse;
 import kong.unirest.Unirest;
@@ -45,6 +45,7 @@ class MailHogMessage {
                             for (int i = 0; i < headerValuesArray.length(); i++) {
                                 Object item = headerValuesArray.get(i);
                                 if (item != null) {
+                                    // Не декодируем, просто добавляем как есть
                                     headerValuesList.add(item.toString());
                                 } else {
                                     headerValuesList.add(null);

@@ -57,7 +57,15 @@ class NotificationServiceIntegrationTest {
 
                     assert !messages.isEmpty() : "No emails received within timeout";
                     assert messages.get(0).getContent().getHeaders().get("To").contains(testEmail) : "Email To header does not match. Expected: " + testEmail + ", Got: " + messages.get(0).getContent().getHeaders().get("To");
-                    assert messages.get(0).getContent().getHeaders().get("Subject").contains("был успешно создан") : "Email Subject does not match CREATE event. Got: " + messages.get(0).getContent().getHeaders().get("Subject");
+
+                    // Получаем список тем (их может быть несколько в виде MIME Base64 строк)
+                    List<String> subjects = messages.get(0).getContent().getHeaders().get("Subject");
+                    assert subjects != null && !subjects.isEmpty() : "Email Subject header is missing or empty";
+
+                    // Проверяем, что хотя бы одна из тем содержит ожидаемую Base64 строку для "был успешно создан"
+                    boolean subjectMatched = subjects.stream()
+                            .anyMatch(subject -> subject.contains("0JfQtNGA0LDQstGB0YLQstGD0LnRgtC1ISDQktCw0Ygg"));
+                    assert subjectMatched : "Email Subject does not contain expected Base64 fragment for CREATE event. Got subjects: " + subjects;
                 });
     }
 
@@ -76,7 +84,15 @@ class NotificationServiceIntegrationTest {
 
                     assert !messages.isEmpty() : "No emails received within timeout";
                     assert messages.get(0).getContent().getHeaders().get("To").contains(testEmail) : "Email To header does not match. Expected: " + testEmail + ", Got: " + messages.get(0).getContent().getHeaders().get("To");
-                    assert messages.get(0).getContent().getHeaders().get("Subject").contains("был удалён") : "Email Subject does not match DELETE event. Got: " + messages.get(0).getContent().getHeaders().get("Subject");
+
+                    // Получаем список тем (их может быть несколько в виде MIME Base64 строк)
+                    List<String> subjects = messages.get(0).getContent().getHeaders().get("Subject");
+                    assert subjects != null && !subjects.isEmpty() : "Email Subject header is missing or empty";
+
+                    // Проверяем, что хотя бы одна из тем содержит ожидаемую Base64 строку для "был удалён"
+                    boolean subjectMatched = subjects.stream()
+                            .anyMatch(subject -> subject.contains("0JfQtNGA0LDQstGB0YLQstGD0LnRgtC1ISDQvdCwINGB0LA="));
+                    assert subjectMatched : "Email Subject does not contain expected Base64 fragment for DELETE event. Got subjects: " + subjects;
                 });
     }
 }
