@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project xmlns="http://maven.apache.org/POM/4.0.0"
          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd  ">
     <modelVersion>4.0.0</modelVersion>
 
     <parent>
@@ -19,14 +19,23 @@
 
     <properties>
         <java.version>17</java.version>
-        <!-- Явно укажем версии Jackson, которые соответствуют Spring Boot 3.3.0 -->
-        <jackson.version>2.17.1</jackson.version> <!-- Пример подходящей версии -->
+        <maven.compiler.release>17</maven.compiler.release>
+        <!-- Добавляем версию Spring Cloud -->
+        <spring-cloud.version>2023.0.3</spring-cloud.version> <!-- Та же, что и в других сервисах -->
+        <jackson.version>2.17.1</jackson.version>
     </properties>
 
-    <!-- Управляющий блок для версий зависимостей -->
+    <!-- Управление версиями Spring Cloud -->
     <dependencyManagement>
         <dependencies>
-            <!-- Управление версиями Jackson -->
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+            <!-- Остальные управляемые зависимости -->
             <dependency>
                 <groupId>com.fasterxml.jackson.core</groupId>
                 <artifactId>jackson-databind</artifactId>
@@ -72,9 +81,6 @@
             <optional>true</optional>
         </dependency>
 
-        <!-- Jackson databind теперь управляется через dependencyManagement выше -->
-        <!-- Не указываем версию явно здесь -->
-
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
@@ -86,7 +92,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Зависимости для тестов с Testcontainers -->
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>kafka</artifactId>
@@ -103,7 +108,11 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Зависимости для HTTP клиента в тестах -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-bootstrap</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>com.konghq</groupId>
             <artifactId>unirest-java</artifactId>
@@ -111,13 +120,21 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-mail</artifactId>
-        </dependency>
-        <dependency>
             <groupId>jakarta.persistence</groupId>
             <artifactId>jakarta.persistence-api</artifactId>
             <version>3.2.0</version>
+        </dependency>
+
+        <!-- Spring Cloud Config Client -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-config</artifactId>
+        </dependency>
+
+        <!-- Spring Cloud Eureka Client -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
         </dependency>
     </dependencies>
 

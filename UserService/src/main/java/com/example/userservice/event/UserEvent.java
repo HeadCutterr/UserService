@@ -1,5 +1,6 @@
 package com.example.userservice.event;
 
+import com.fasterxml.jackson.annotation.JsonProperty; // Добавь импорт
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,6 +13,9 @@ public class UserEvent {
     private EventType eventType;
 
     public enum EventType {
-        CREATE, DELETE
+        @JsonProperty("CREATE") // Добавь аннотацию
+        CREATE,
+        @JsonProperty("DELETE") // Добавь аннотацию
+        DELETE
     }
 }

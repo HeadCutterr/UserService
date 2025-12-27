@@ -18,7 +18,7 @@ public class NotificationService {
         this.emailService = emailService;
     }
 
-    @KafkaListener(topics = "user-events", groupId = "notification-group")
+    @KafkaListener(topics = "user-events", groupId = "notification-group", containerFactory = "userEventKafkaListenerContainerFactory")
     public void handleUserEvent(UserEvent event) {
         log.info("Received user event: {} for email: {}", event.getEventType(), event.getEmail());
 
