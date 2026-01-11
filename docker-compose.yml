@@ -1,0 +1,209 @@
+version: '3.8'
+
+services:
+  # Zookeeper для Kafka
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.4.0
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    healthcheck:
+      test: echo stat | nc localhost 2181 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  # Kafka Broker
+  kafka:
+    image: confluentinc/cp-kafka:7.4.0
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
+    healthcheck:
+      test: kafka-topics --bootstrap-server kafka:9092 --list
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+    networks:
+      - backend
+
+  # PostgreSQL для user-service
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: user_db
+      POSTGRES_USER: app_user
+      POSTGRES_PASSWORD: secure_pass
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U app_user -d user_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - backend
+
+  # Mailhog для тестирования email
+  mailhog:
+    image: mailhog/mailhog:latest
+    ports:
+      - "8025:8025" # Web UI для просмотра писем
+      - "1025:1025" # SMTP порт
+    networks:
+      - backend
+
+  # Eureka Server для Service Discovery
+  eureka-server:
+    build:
+      context: ./eureka-server # Путь к директории с eureka-server и Dockerfile
+    ports:
+      - "8761:8761"
+    environment:
+      - SERVER_PORT=8761
+      # Отключаем регистрацию и фетчинг, т.к. это сервер
+      - EUREKA_CLIENT_REGISTER_WITH_EUREKA=false
+      - EUREKA_CLIENT_FETCH_REGISTRY=false
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 40s
+    networks:
+      - backend
+    # Eureka не зависит от Kafka, но другие сервисы зависят от Eureka
+    # Поэтому Kafka должна быть готова до запуска user-service и notification-service
+
+   # Config Server для External Configuration
+  config-server:
+    build:
+      context: ./config-server # Путь к директории с config-server и Dockerfile
+    ports:
+      - "8888:8888"
+    environment:
+      - SERVER_PORT=8888
+      # Используем удаленный git репозиторий
+      - SPRING_CLOUD_CONFIG_SERVER_GIT_URI=https://github.com/HeadCutterr/UserService-config
+      # Указываем, что Eureka Client должен работать
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka
+
+    healthcheck:
+        test: ["CMD", "curl", "-f", "http://localhost:8888/actuator/health"] # или другой эндпоинт
+        interval: 30s
+        timeout: 10s
+        retries: 5
+        start_period: 40s
+    networks:
+      - backend
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: ./api-gateway # Путь к директории с api-gateway и Dockerfile
+    ports:
+      - "8070:8070"
+    environment:
+      - SERVER_PORT=8070
+      # Указываем на внутренний адрес config-server и eureka
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka
+    depends_on:
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8070/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - backend
+
+  # User Service
+  user-service:
+    build:
+      context: ./UserService # Путь к директории с user-service и Dockerfile
+    ports:
+      - "8080:8080" # или 8081 для dev профиля
+    environment:
+      - SERVER_PORT=8080
+      # Указываем на внутренние адреса
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/user_db
+      - SPRING_DATASOURCE_USERNAME=app_user
+      - SPRING_DATASOURCE_PASSWORD=secure_pass
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - backend
+
+  # Notification Service
+  notification-service:
+    build:
+      context: ./Notificationservice # Путь к директории с notification-service и Dockerfile
+    environment:
+      - SERVER_PORT=8082
+      # Указываем на внутренние адреса
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - SPRING_MAIL_HOST=mailhog
+      - SPRING_MAIL_PORT=1025
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://config-server:8888
+      - EUREKA_CLIENT_SERVICE_URL_DEFAULTZONE=http://eureka-server:8761/eureka
+    depends_on:
+      kafka:
+        condition: service_healthy
+      mailhog:
+        condition: service_started # Mailhog не имеет healthcheck, поэтому используем started
+      config-server:
+        condition: service_healthy
+      eureka-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
+
+volumes:
+  postgres_data: 
+    driver: local

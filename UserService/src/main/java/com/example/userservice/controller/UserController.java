@@ -2,8 +2,8 @@ package com.example.userservice.controller;
 
 import com.example.userservice.dto.UserCreateDTO;
 import com.example.userservice.dto.UserDTO;
-import com.example.userservice.assembler.UserResourceAssembler; // Импортируем assembler
-import com.example.userservice.model.UserResource; // Импортируем resource
+import com.example.userservice.assembler.UserResourceAssembler;
+import com.example.userservice.model.UserResource;
 import com.example.userservice.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,8 +14,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.hateoas.CollectionModel; // Импортируем CollectionModel
-import org.springframework.hateoas.EntityModel; // Импортируем EntityModel
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -31,37 +31,37 @@ import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 public class UserController {
 
     private final UserService userService;
-    private final UserResourceAssembler assembler; // Инжектируем assembler
+    private final UserResourceAssembler assembler;
 
     @Autowired
-    public UserController(UserService userService, UserResourceAssembler assembler) { // Добавляем assembler в конструктор
+    public UserController(UserService userService, UserResourceAssembler assembler) {
         this.userService = userService;
         this.assembler = assembler;
     }
 
     @Operation(summary = "Get all users", description = "Retrieves a list of all users with links.")
     @GetMapping
-    public ResponseEntity<CollectionModel<UserResource>> getAllUsers() { // Меняем возвращаемый тип
+    public ResponseEntity<CollectionModel<UserResource>> getAllUsers() {
         List<UserDTO> users = userService.getAllUsers();
         List<UserResource> resources = users.stream()
-                .map(assembler::toModel) // Используем assembler для преобразования
+                .map(assembler::toModel)
                 .toList();
         CollectionModel<UserResource> collectionModel = CollectionModel.of(resources);
-        collectionModel.add(linkTo(methodOn(UserController.class).getAllUsers()).withSelfRel()); // Добавляем ссылку на себя
+        collectionModel.add(linkTo(methodOn(UserController.class).getAllUsers()).withSelfRel());
         return ResponseEntity.ok(collectionModel);
     }
 
     @Operation(summary = "Get user by ID", description = "Retrieves a user by their unique ID with links.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "User found", content = @Content(schema = @Schema(implementation = UserResource.class))), // Меняем тип возвращаемого значения в схеме
+            @ApiResponse(responseCode = "200", description = "User found", content = @Content(schema = @Schema(implementation = UserResource.class))),
             @ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @GetMapping("/{id}")
-    public ResponseEntity<EntityModel<UserResource>> getUserById( // Меняем возвращаемый тип
+    public ResponseEntity<EntityModel<UserResource>> getUserById(
                                                                   @Parameter(description = "ID of the user to retrieve", required = true) @PathVariable Long id) {
         return userService.getUserById(id)
                 .map(userDTO -> {
-                    UserResource resource = assembler.toModel(userDTO); // Используем assembler
+                    UserResource resource = assembler.toModel(userDTO);
                     return ResponseEntity.ok(EntityModel.of(resource));
                 })
                 .orElse(ResponseEntity.notFound().build());
@@ -69,29 +69,29 @@ public class UserController {
 
     @Operation(summary = "Create a new user", description = "Creates a new user with the provided details and returns the created user with links.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "201", description = "User created successfully", content = @Content(schema = @Schema(implementation = UserResource.class))), // Меняем тип возвращаемого значения в схеме
+            @ApiResponse(responseCode = "201", description = "User created successfully", content = @Content(schema = @Schema(implementation = UserResource.class))),
             @ApiResponse(responseCode = "400", description = "Invalid input data", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PostMapping
-    public ResponseEntity<EntityModel<UserResource>> createUser( // Меняем возвращаемый тип
+    public ResponseEntity<EntityModel<UserResource>> createUser(
                                                                  @Valid @RequestBody UserCreateDTO dto) {
         UserDTO createdUser = userService.createUser(dto);
-        UserResource resource = assembler.toModel(createdUser); // Используем assembler
+        UserResource resource = assembler.toModel(createdUser);
         return ResponseEntity.status(HttpStatus.CREATED).body(EntityModel.of(resource));
     }
 
     @Operation(summary = "Update an existing user", description = "Updates an existing user identified by their ID and returns the updated user with links.")
     @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "User updated successfully", content = @Content(schema = @Schema(implementation = UserResource.class))), // Меняем тип возвращаемого значения в схеме
+            @ApiResponse(responseCode = "200", description = "User updated successfully", content = @Content(schema = @Schema(implementation = UserResource.class))),
             @ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
             @ApiResponse(responseCode = "400", description = "Invalid input data", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @PutMapping("/{id}")
-    public ResponseEntity<EntityModel<UserResource>> updateUser( // Меняем возвращаемый тип
+    public ResponseEntity<EntityModel<UserResource>> updateUser(
                                                                  @Parameter(description = "ID of the user to update", required = true) @PathVariable Long id,
                                                                  @Valid @RequestBody UserCreateDTO dto) {
         UserDTO updatedUser = userService.updateUser(id, dto);
-        UserResource resource = assembler.toModel(updatedUser); // Используем assembler
+        UserResource resource = assembler.toModel(updatedUser);
         return ResponseEntity.ok(EntityModel.of(resource));
     }
 
@@ -101,7 +101,7 @@ public class UserController {
             @ApiResponse(responseCode = "404", description = "User not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser( // Удалять ресурс - возвращаем просто статус
+    public ResponseEntity<Void> deleteUser(
                                             @Parameter(description = "ID of the user to delete", required = true) @PathVariable Long id) {
         if (userService.deleteUser(id)) {
             return ResponseEntity.noContent().build();
